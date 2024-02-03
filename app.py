@@ -4,48 +4,45 @@
 
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
-import time 
-import customize_gui # streamlit GUI modifications
-gui = customize_gui.gui()
-import plot 
-my_plot = plot.plotting()
+import customize_gui as gui
+gui = gui.gui()
+from sklearn.cluster import KMeans
+import cv2 # !pip install opencv-python
+
+def compress_image(image, num_clusters):
+    img = cv2.imdecode(np.fromstring(image.read(), np.uint8), 1)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img_list = img.reshape(-1, 3)
+    kmeans = KMeans(n_clusters=num_clusters)
+    kmeans.fit(img_list)
+    # Replace each pixel value with its nearby centroid
+    compressed_img_list = kmeans.cluster_centers_[kmeans.labels_]
+    compressed_img_array = compressed_img_list.reshape(img.shape)
+    # Normalize the pixel values to 0-1
+    compressed_img_array = compressed_img_array / 255.0
+    return compressed_img_array
 
 def main():
-    # Set up the app UI
     gui.clean_format(wide=True)
-    Sidebar = gui.about(text = "This code implements a live data viewing feed")
-    Title, subTitle, image_spot = st.empty(), st.sidebar.empty(), st.columns([1,5,1])[1].empty()
-    with Title:
-        st.title("Live Data Feed")
+    Sidebar = gui.about(text = "This code implements Kmeans clustering on an image")
+    st.title("Image Compression")
+    st.write("This is a simple example of Kmeans clustering on an image. The image is compressed to a specified number of colors.")
+    
+    col1, col2 = st.columns(2)
+    with col1: before = st.empty()
+    with col2: after = st.empty()
 
-    # Initialize loop variables
-    fig, ax = my_plot.get_colored_plt("#F6F6F3",'#335095','#D6D6D6')
-    my_plot.set_adaptive_ax(ax)
-    dynamic_plot, = ax.plot([], [], 'o', color='#335095', markersize=5)
-    start_time = time.time()
-    data_log = []
-    times = []
-    ax.set_ylim(-1.5, 1.5) # set the Y axis limits to be static
+    with st.sidebar: 
+        image = st.file_uploader("Choose an image...", type="jpg")
+    if image is not None:
+        with col1: 
+            st.image(image, use_column_width=True)
+            st.write("Image uploaded successfully.")
 
-    while True:
-        t = time.time() - start_time
-        times.append(t)
+        with st.spinner("Compressing image..."):
+            compressed_image = compress_image(image, 16)  # Compress image to 16 colors
+        with col2:
+            st.image(compressed_image, use_column_width=True)
+            st.write("Image compressed successfully.")
 
-        # simulate or retrieve data here 
-        # noisy sinusoidal data
-        data_log.append((np.array([t, np.sin(t)]) + np.random.randn(2) * 0.1)[1])
-
-        # Update the axes limits
-        ax.set_xlim(max(times)-10, max(times)+10)
-        x_ticks = np.linspace(ax.get_xlim()[0], ax.get_xlim()[1], 3)
-        ax.set_xticks(x_ticks)
-        ax.set_xticklabels([f'{tick:.2f}' for tick in x_ticks])  # format tick labels
-
-        # update the display
-        dynamic_plot.set_data(times,data_log)
-        #show the figure
-        with image_spot:
-            st.pyplot(fig) 
-
-main()
+main() 
