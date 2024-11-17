@@ -14,6 +14,7 @@ This code uses the following libraries:
 - `streamlit`: for building the user interface.
 - `scikit-learn`: for kmeans
 - `numpy`: for arrays
+- `opencv`: for image manipulation
 
 &nbsp;
 
